@@ -121,20 +121,12 @@ fn mine(opts: MineOpts) {
     // TODO: error handling
     let template = serde_json::from_str::<Success>(&ser_resp).unwrap();
     log::info!("template: {:?}", template.result);
-    log::info!("bits: {:?}", template.result.get("bits"));
-    log::info!("coinbaseaux: {:?}", template.result.get("coinbaseaux"));
-    log::info!("curtime: {:?}", template.result.get("curtime"));
-    log::info!("height: {:?}", template.result.get("height"));
-    log::info!("mintime: {:?}", template.result.get("mintime"));
-    log::info!("mutable: {:?}", template.result.get("mutable"));
+    log::info!("bits: {:?}", template.result.get("bits").unwrap());
+    log::info!("height: {:?}", template.result.get("height").unwrap());
     log::info!(
         "previousblockhash: {:?}",
-        template.result.get("previousblockhash")
+        template.result.get("previousblockhash").unwrap()
     );
-    log::info!("rules: {:?}", template.result.get("rules"));
-    log::info!("target: {:?}", template.result.get("target"));
-    log::info!("vbavailable: {:?}", template.result.get("vbavailable"));
-    log::info!("vbrequired: {:?}", template.result.get("vbrequired"));
-    log::info!("version: {:?}", template.result.get("version"));
-    log::info!("weightlimit: {:?}", template.result.get("weightlimit"));
+    log::info!("target: {:?}", template.result.get("target").unwrap());
+    log::info!("version: {:?}", template.result.get("version").unwrap());
 }
