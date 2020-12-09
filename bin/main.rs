@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate ecvrf;
 extern crate env_logger;
+extern crate jsonrpc_core;
 extern crate rustc_hex as hex;
 extern crate serde_json;
 extern crate ureq;
@@ -15,6 +16,7 @@ use std::io::prelude::*;
 use clap::Clap;
 use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
+use jsonrpc_core::types::response::{Output, Response};
 
 use rpc::v1::types::BlockTemplate;
 
@@ -115,5 +117,7 @@ fn mine(opts: MineOpts) {
     let ser_resp = resp.into_string().unwrap();
     log::info!("recieved: {:?}", ser_resp);
 
-    let template: BlockTemplate = serde_json::from_str(&ser_resp).unwrap();
+    // let template: Response = serde_json::from_str(&ser_resp).unwrap();
+    let template = serde_json::from_str::<Output>(&ser_resp).unwrap();
+    log::info!("template: {:?}", template);
 }

@@ -8,6 +8,7 @@ description = "RandChain: Decentralised Randomness Beacon from Sequential Proof-
 [dependencies]
 clap = { package = "clap-v3", version = "3.0.0-beta.1" }  # todo: replace with official v3 when it's released to crates.io
 ureq = { version = "1.5.4", features = ["json", "charset"] }
+jsonrpc-core = { git = "https://github.com/ethcore/jsonrpc.git" }
 serde_json = "1.0"
 ecvrf = "0.4.2"
 rustc-hex = "2"
