@@ -112,7 +112,7 @@ fn mine(opts: MineOpts) {
         "jsonrpc": "2.0",
         "method": "getblocktemplate",
         "params": [{}],
-        "id": r#""1""#
+        "id": format!("\"{}\"", 1)
          }));
     // TODO: error handling
     let ser_resp = resp.into_string().unwrap();
@@ -120,7 +120,8 @@ fn mine(opts: MineOpts) {
 
     // TODO: error handling
     let template = serde_json::from_str::<Success>(&ser_resp).unwrap();
-    log::info!("template: {:?}", template.result);
+    log::info!("template: {:?}", template);
+    log::info!("template.result: {:?}", template.result);
     log::info!("bits: {:?}", template.result.get("bits").unwrap());
     log::info!("height: {:?}", template.result.get("height").unwrap());
     log::info!(
