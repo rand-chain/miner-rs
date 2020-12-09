@@ -2,15 +2,20 @@ extern crate clap;
 extern crate ecvrf;
 extern crate env_logger;
 extern crate rustc_hex as hex;
+extern crate serde_json;
 extern crate ureq;
 #[macro_use]
 extern crate log;
+
+extern crate miner;
 
 use std::io::prelude::*;
 
 use clap::Clap;
 use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
+
+use miner::BlockTemplate;
 
 /// RandChain miner client
 #[derive(Clap)]
@@ -106,6 +111,7 @@ fn mine(opts: MineOpts) {
         "params": [{}],
         "id":1
          }));
+    let serialized = resp.into_string().unwrap();
 
-    log::info!("recieved: {:?}", resp.into_string().unwrap());
+    log::info!("recieved: {:?}", serialized);
 }
