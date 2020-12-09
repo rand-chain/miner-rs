@@ -1,16 +1,20 @@
 [package]
-name = "randchain"
+name = "miner-rs"
 version = "0.1.0"
 license = "GPL-3.0"
 authors = ["RandChain https://github.com/rand-chain/"]
 description = "RandChain: Decentralised Randomness Beacon from Sequential Proof-of-Work. https://eprint.iacr.org/2020/1033.pdf"
 
 [dependencies]
+clap = { package = "clap-v3", version = "3.0.0-beta.1" }  # todo: replace with official v3 when it's released to crates.io
+ureq = { version = "1.5.4", features = ["json", "charset"] }
+serde_json = "1.0"
+ecvrf = "0.4.2"
+rustc-hex = "2"
 log = "0.4"
 env_logger = "0.5"
 app_dirs = { git = "https://github.com/paritytech/app-dirs-rs" }
 libc = "0.2"
-clap = { version = "2", features = ["yaml"] }
 chain = { path = "chain" }
 bitcrypto = { path = "crypto" }
 db = { path = "db" }
@@ -41,8 +45,8 @@ panic = 'abort'
 debug = true
 
 [[bin]]
-path = "randchaind/main.rs"
-name = "randchaind"
+name = "miner"
+path = "bin/main.rs"
 
 [workspace]
 members = [
