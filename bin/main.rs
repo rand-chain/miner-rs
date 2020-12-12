@@ -163,7 +163,7 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
         "id": format!("\"{}\"", req_id)
          }));
     let ser_resp = resp.into_string().unwrap();
-    log::info!("recieved: {:?}", ser_resp);
+    log::debug!("recieved: {:?}", ser_resp);
 
     let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
         Err(_) => return Err(Error::SerError),
@@ -172,7 +172,7 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
 
     let template =
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
-    log::info!("template: {:?}", template);
+    log::info!("receive template: {:?}", template);
 
     Ok(minerBlockTemplate {
         version: template.version,
