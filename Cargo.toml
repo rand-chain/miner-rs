@@ -11,6 +11,7 @@ ureq = { version = "1.5.4", features = ["json", "charset"] }
 jsonrpc-core = { git = "https://github.com/ethcore/jsonrpc.git" }
 serde_json = "1.0"
 ecvrf = "0.4.2"
+chan = "0.1.23"
 rustc-hex = "2"
 log = "0.4"
 env_logger = "0.5"

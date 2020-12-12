@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate chan;
 extern crate clap;
 extern crate ecvrf;
 extern crate env_logger;
@@ -13,6 +15,7 @@ extern crate primitives;
 extern crate rpc;
 
 use std::io::prelude::*;
+use std::time::Duration;
 
 use clap::Clap;
 use ecvrf::VrfPk;
@@ -22,6 +25,11 @@ use jsonrpc_core::types::response::{Output, Response, Success};
 use miner::BlockTemplate as minerBlockTemplate;
 use primitives::compact::Compact;
 use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
+
+#[derive(Debug, PartialEq, Clone)]
+enum Error {
+    SerError,
+}
 
 /// RandChain miner client
 #[derive(Clap)]
@@ -108,40 +116,69 @@ fn load_pk(filename: &str) -> VrfPk {
 
 fn mine(opts: MineOpts) {
     let pubkey = load_pk(&opts.pubkey);
+    let tick = chan::tick(Duration::from_secs(1));
+    let mut req_id = 1u64;
+    let mut last_height = 1u32;
 
-    let resp = ureq::post(&opts.endpoint)
+    loop {
+        chan_select! {
+            default => {},
+
+            tick.recv() => {
+                log::info!("req_id: {}", req_id);
+
+                match try_req(&opts.endpoint, req_id) {
+                    Err(_) => {}
+
+                    Ok(template) => {
+                        if template.height == last_height {
+                            continue;
+                        };
+
+                        last_height = template.height;
+                        let solution = match miner::find_solution(&template, &pubkey, 1) {
+                            Some(sol) => sol,
+                            None => continue, // TODO:
+                        };
+
+                        log::info!("found solution: {:?}", solution.iterations);
+
+                        // submit
+                    }
+                }
+
+                req_id += 1;
+            },
+        }
+    }
+}
+
+fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
+    let resp = ureq::post(url)
         .set("X-My-Header", "Secret")
         .send_json(ureq::json!({
         "jsonrpc": "2.0",
         "method": "getblocktemplate",
         "params": [{}],
-        // TODO; ID management
-        "id": format!("\"{}\"", 1)
+        "id": format!("\"{}\"", req_id)
          }));
-    // TODO: error handling
     let ser_resp = resp.into_string().unwrap();
     log::info!("recieved: {:?}", ser_resp);
 
-    // TODO: error handling
-    let success_resp = serde_json::from_str::<Success>(&ser_resp).unwrap();
+    let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
+        Err(_) => return Err(Error::SerError),
+        success_resp => success_resp.unwrap(),
+    };
+
     let template =
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("template: {:?}", template);
 
-    let parsed_template = minerBlockTemplate {
+    Ok(minerBlockTemplate {
         version: template.version,
         previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
         time: template.curtime,
         height: template.height,
         bits: Compact::from(template.bits),
-    };
-
-    let solution = match miner::find_solution(&parsed_template, &pubkey, 1) {
-        Some(sol) => sol,
-        None => return, // TODO:
-    };
-
-    log::info!("found solution: {:?}", solution.iterations);
-
-    // submit
+    })
 }
