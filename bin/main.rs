@@ -128,17 +128,18 @@ fn mine(opts: MineOpts) {
                 log::info!("req_id: {}", req_id);
 
                 match try_req(&opts.endpoint, req_id) {
-                    Err(_) => {}
+                    Err(_) =>  continue,
 
                     Ok(template) => {
                         if template.height == last_height {
                             continue;
                         };
 
+                        req_id += 1;
                         last_height = template.height;
                         let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
                             Some(sol) => sol,
-                            None => continue, // TODO:
+                            None => continue,
                         };
 
                         log::info!("found solution: {:?}", solution.iterations);
@@ -147,7 +148,6 @@ fn mine(opts: MineOpts) {
                     }
                 }
 
-                req_id += 1;
             },
         }
     }
