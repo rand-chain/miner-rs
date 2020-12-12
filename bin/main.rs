@@ -8,8 +8,8 @@ extern crate ureq;
 #[macro_use]
 extern crate log;
 
-extern crate primitives;
 extern crate miner;
+extern crate primitives;
 extern crate rpc;
 
 use std::io::prelude::*;
@@ -19,13 +19,9 @@ use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
 use jsonrpc_core::types::response::{Output, Response, Success};
 
-use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
 use miner::BlockTemplate as minerBlockTemplate;
-use primitives::{
-    // bigint, bytes, 
-    compact::Compact,
-    // hash,
-};
+use primitives::compact::Compact;
+use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
 
 /// RandChain miner client
 #[derive(Clap)]
@@ -128,10 +124,11 @@ fn mine(opts: MineOpts) {
 
     // TODO: error handling
     let success_resp = serde_json::from_str::<Success>(&ser_resp).unwrap();
-    let template = serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
+    let template =
+        serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("template: {:?}", template);
 
-    let parsed_template = minerBlockTemplate{
+    let parsed_template = minerBlockTemplate {
         version: template.version,
         previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
         time: template.curtime,
@@ -139,9 +136,9 @@ fn mine(opts: MineOpts) {
         bits: Compact::from(template.bits),
     };
 
-    let solution = match miner::find_solution(&parsed_template, &pubkey) {
+    let solution = match miner::find_solution(&parsed_template, &pubkey, 1) {
         Some(sol) => sol,
-        None => return,  // TODO:
+        None => return, // TODO:
     };
 
     log::info!("found solution: {:?}", solution.iterations);
