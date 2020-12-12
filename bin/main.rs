@@ -18,7 +18,8 @@ use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
 use jsonrpc_core::types::response::{Output, Response, Success};
 
-use rpc::v1::types::BlockTemplate;
+use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
+use miner::BlockTemplate as minerBlockTemplate;
 
 /// RandChain miner client
 #[derive(Clap)]
@@ -112,6 +113,7 @@ fn mine(opts: MineOpts) {
         "jsonrpc": "2.0",
         "method": "getblocktemplate",
         "params": [{}],
+        // TODO; ID management
         "id": format!("\"{}\"", 1)
          }));
     // TODO: error handling
@@ -119,15 +121,7 @@ fn mine(opts: MineOpts) {
     log::info!("recieved: {:?}", ser_resp);
 
     // TODO: error handling
-    let template = serde_json::from_str::<Success>(&ser_resp).unwrap();
+    let success_resp = serde_json::from_str::<Success>(&ser_resp).unwrap();
+    let template = serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("template: {:?}", template);
-    log::info!("template.result: {:?}", template.result);
-    log::info!("bits: {:?}", template.result.get("bits").unwrap());
-    log::info!("height: {:?}", template.result.get("height").unwrap());
-    log::info!(
-        "previousblockhash: {:?}",
-        template.result.get("previousblockhash").unwrap()
-    );
-    log::info!("target: {:?}", template.result.get("target").unwrap());
-    log::info!("version: {:?}", template.result.get("version").unwrap());
 }
