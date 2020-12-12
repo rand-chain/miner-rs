@@ -8,6 +8,7 @@ extern crate ureq;
 #[macro_use]
 extern crate log;
 
+extern crate primitives;
 extern crate miner;
 extern crate rpc;
 
@@ -20,6 +21,11 @@ use jsonrpc_core::types::response::{Output, Response, Success};
 
 use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
 use miner::BlockTemplate as minerBlockTemplate;
+use primitives::{
+    // bigint, bytes, 
+    compact::Compact,
+    // hash,
+};
 
 /// RandChain miner client
 #[derive(Clap)]
@@ -124,4 +130,21 @@ fn mine(opts: MineOpts) {
     let success_resp = serde_json::from_str::<Success>(&ser_resp).unwrap();
     let template = serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("template: {:?}", template);
+
+    let parsed_template = minerBlockTemplate{
+        version: template.version,
+        previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
+        time: template.curtime,
+        height: template.height,
+        bits: Compact::from(template.bits),
+    };
+
+    let solution = match miner::find_solution(&parsed_template, &pubkey) {
+        Some(sol) => sol,
+        None => return,  // TODO:
+    };
+
+    log::info!("found solution: {:?}", solution.iterations);
+
+    // submit
 }
