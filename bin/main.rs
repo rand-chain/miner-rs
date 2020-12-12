@@ -136,7 +136,7 @@ fn mine(opts: MineOpts) {
                         };
 
                         last_height = template.height;
-                        let solution = match miner::find_solution(&template, &pubkey, 1) {
+                        let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
                             Some(sol) => sol,
                             None => continue, // TODO:
                         };
