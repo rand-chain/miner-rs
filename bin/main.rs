@@ -144,7 +144,7 @@ fn mine(opts: MineOpts) {
 
                         log::info!("found solution: {:?}", solution.iterations);
 
-                        // submit
+                        // TOOD: submit
                     }
                 }
 
