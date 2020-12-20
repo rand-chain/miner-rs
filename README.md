@@ -1,11 +1,11 @@
-# rust-randchain
+# Randchain miner
 
-Official Rust implementation of the RandChain protocol [^1].
+Standalone RandChain miner via RPC call.
 
-## License
+## prerequisite
 
-See [LICENSE](LICENSE).
+As we make use of `Reqwest`, [rust-native-tls](https://github.com/sfackler/rust-native-tls) is required. See below for install instructions:
 
-## References
-
-[^1]: [RandChain: Decentralised Randomness Beacon from Sequential Proof-of-Work](https://eprint.iacr.org/2020/1033.pdf)
++ https://github.com/seanmonstar/reqwest#requirements
++ https://github.com/sfackler/rust-openssl
++ https://docs.rs/openssl/0.10.30/openssl/
