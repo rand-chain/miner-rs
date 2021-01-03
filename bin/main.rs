@@ -53,8 +53,8 @@ struct KeyGenOpts {
     #[clap(short = "u", long = "pub", default_value = "pub.key")]
     pubkey: String,
     /// Output private key file
-    #[clap(short = "r", long = "pri", default_value = "pri.key")]
-    prikey: String,
+    #[clap(short = "r", long = "prv", default_value = "prv.key")]
+    prvkey: String,
 }
 
 /// A subcommand for mining
@@ -84,8 +84,8 @@ fn main() {
 }
 
 fn key_gen(opts: KeyGenOpts) {
-    if std::path::Path::new(&opts.prikey).exists() {
-        log::error!("{} existed", &opts.prikey);
+    if std::path::Path::new(&opts.prvkey).exists() {
+        log::error!("{} existed", &opts.prvkey);
         return;
     }
     if std::path::Path::new(&opts.pubkey).exists() {
@@ -97,8 +97,8 @@ fn key_gen(opts: KeyGenOpts) {
     let sk_hex: String = sk.to_bytes().to_hex();
     let pk_hex: String = pk.to_bytes().to_hex();
 
-    std::fs::write(&opts.prikey, sk_hex).expect("save prikey err");
-    log::info!("PriKey saved to: {}", opts.prikey);
+    std::fs::write(&opts.prvkey, sk_hex).expect("save prvkey err");
+    log::info!("PrvKey saved to: {}", opts.prvkey);
     std::fs::write(&opts.pubkey, pk_hex).expect("save pubkey err");
     log::info!("PubKey saved to: {}", opts.pubkey);
 }
