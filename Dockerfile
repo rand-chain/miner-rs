@@ -19,7 +19,7 @@ RUN cargo build --release
 FROM rust:1.45 as runtime
 LABEL authors="Haoyu Lin and Runchao Han"
 WORKDIR /app
-COPY --from=builder /app/target/release/randchaind /bin/randchaind
+COPY --from=builder /app/target/release/miner /bin/miner
 # show backtraces
 ENV RUST_BACKTRACE=full
 ENV RUST_LOG=trace
@@ -27,4 +27,4 @@ ENV RUST_LOG=trace
 # P2P  8333    18333   18444
 # RPC  8332    18332   18443
 EXPOSE 8333 18333 18444 8332 18332 18443
-ENTRYPOINT ["/bin/randchaind"]
+ENTRYPOINT ["/bin/miner"]
