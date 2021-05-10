@@ -127,7 +127,7 @@ fn mine(opts: MineOpts) {
             tick.recv() => {
                 log::info!("req_id: {}", req_id);
 
-                match try_req(&opts.endpoint, req_id) {
+                match getblocktemplate(&opts.endpoint, req_id) {
                     Err(_) =>  continue,
 
                     Ok(template) => {
@@ -143,22 +143,53 @@ fn mine(opts: MineOpts) {
                         };
 
                         log::info!("found solution: {:?}", solution.iterations);
-
-                        // TOOD: submit
+                        match submit_block(&opts.endpoint, &template) {
+                            Ok(res) => log::info!("submit_block ok: {}", res),
+                            Err(e) => log::error!("submit_block error: {}", e),
+                        };
                     }
                 }
-
             },
         }
     }
 }
 
-fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
+fn getblocktemplate(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
     let resp = ureq::post(url)
         .set("X-My-Header", "Secret")
         .send_json(ureq::json!({
         "jsonrpc": "2.0",
         "method": "getblocktemplate",
+        "params": [{}],
+        "id": format!("\"{}\"", req_id)
+         }));
+    let ser_resp = resp.into_string().unwrap();
+    log::debug!("recieved: {:?}", ser_resp);
+
+    let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
+        Err(_) => return Err(Error::SerError),
+        success_resp => success_resp.unwrap(),
+    };
+
+    let template =
+        serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
+    log::info!("receive template: {:?}", template);
+
+    Ok(minerBlockTemplate {
+        version: template.version,
+        previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
+        time: template.curtime,
+        height: template.height,
+        bits: Compact::from(template.bits),
+    })
+}
+
+fn submit_block(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
+    let resp = ureq::post(url)
+        .set("X-My-Header", "Secret")
+        .send_json(ureq::json!({
+        "jsonrpc": "2.0",
+        "method": "submit_block",
         "params": [{}],
         "id": format!("\"{}\"", req_id)
          }));
