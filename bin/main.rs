@@ -184,8 +184,11 @@ fn getblocktemplate(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error>
     })
 }
 
-fn submit_block(url: &str, block_template: &miner::BlockTemplate) -> Result<SubmitBlockResponse, Error> {
-    let block = SubmitBlockRequest{};
+fn submit_block(
+    url: &str,
+    block_template: &miner::BlockTemplate,
+) -> Result<SubmitBlockResponse, Error> {
+    let block = SubmitBlockRequest {};
 
     let resp = ureq::post(url)
         .set("X-My-Header", "Secret")
