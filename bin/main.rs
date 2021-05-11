@@ -199,24 +199,13 @@ fn submit_block(
         "block": format!("\"{}\"", serde_json::to_string(&block).unwrap())
          }));
 
-    unimplemented!();
-    // let ser_resp = resp.into_string().unwrap();
-    // log::debug!("recieved: {:?}", ser_resp);
+    let ser_resp = resp.into_string().unwrap();
+    log::debug!("recieved: {:?}", ser_resp);
 
-    // let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
-    //     Err(_) => return Err(Error::SerError),
-    //     success_resp => success_resp.unwrap(),
-    // };
+    let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
+        Err(_) => return Err(Error::SerError),
+        success_resp => success_resp.unwrap(),
+    };
 
-    // let template =
-    //     serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
-    // log::info!("receive template: {:?}", template);
-
-    // Ok(minerBlockTemplate {
-    //     version: template.version,
-    //     previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
-    //     time: template.curtime,
-    //     height: template.height,
-    //     bits: Compact::from(template.bits),
-    // })
+    serde_json::from_str::<SubmitBlockResponse>(&success_resp.result.to_string())?
 }
