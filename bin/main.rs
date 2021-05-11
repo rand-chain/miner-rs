@@ -24,7 +24,7 @@ use jsonrpc_core::types::response::{Output, Response, Success};
 
 use miner::BlockTemplate as minerBlockTemplate;
 use primitives::compact::Compact;
-use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
+use rpc::v1::types::{BlockTemplate as rpcBlockTemplate, SubmitBlockRequest, SubmitBlockResponse};
 
 #[derive(Debug, PartialEq, Clone)]
 enum Error {
@@ -184,32 +184,36 @@ fn getblocktemplate(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error>
     })
 }
 
-fn submit_block(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
+fn submit_block(url: &str, block_template: &miner::BlockTemplate) -> Result<SubmitBlockResponse, Error> {
+    let block = SubmitBlockRequest{};
+
     let resp = ureq::post(url)
         .set("X-My-Header", "Secret")
         .send_json(ureq::json!({
         "jsonrpc": "2.0",
         "method": "submit_block",
         "params": [{}],
-        "id": format!("\"{}\"", req_id)
+        "block": format!("\"{}\"", block)
          }));
-    let ser_resp = resp.into_string().unwrap();
-    log::debug!("recieved: {:?}", ser_resp);
 
-    let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
-        Err(_) => return Err(Error::SerError),
-        success_resp => success_resp.unwrap(),
-    };
+    unimplemented!();
+    // let ser_resp = resp.into_string().unwrap();
+    // log::debug!("recieved: {:?}", ser_resp);
 
-    let template =
-        serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
-    log::info!("receive template: {:?}", template);
+    // let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
+    //     Err(_) => return Err(Error::SerError),
+    //     success_resp => success_resp.unwrap(),
+    // };
 
-    Ok(minerBlockTemplate {
-        version: template.version,
-        previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
-        time: template.curtime,
-        height: template.height,
-        bits: Compact::from(template.bits),
-    })
+    // let template =
+    //     serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
+    // log::info!("receive template: {:?}", template);
+
+    // Ok(minerBlockTemplate {
+    //     version: template.version,
+    //     previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
+    //     time: template.curtime,
+    //     height: template.height,
+    //     bits: Compact::from(template.bits),
+    // })
 }
