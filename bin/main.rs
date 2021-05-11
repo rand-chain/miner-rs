@@ -144,8 +144,8 @@ fn mine(opts: MineOpts) {
 
                         log::info!("found solution: {:?}", solution.iterations);
                         match submit_block(&opts.endpoint, &template) {
-                            Ok(res) => log::info!("submit_block ok: {}", res),
-                            Err(e) => log::error!("submit_block error: {}", e),
+                            Ok(res) => log::info!("submit_block ok: {:?}", res),
+                            Err(e) => log::error!("submit_block error: {:?}", e),
                         };
                     }
                 }
@@ -196,7 +196,7 @@ fn submit_block(
         "jsonrpc": "2.0",
         "method": "submit_block",
         "params": [{}],
-        "block": format!("\"{}\"", block)
+        "block": format!("\"{}\"", serde_json::to_string(&block).unwrap())
          }));
 
     unimplemented!();
