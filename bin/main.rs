@@ -9,22 +9,25 @@ extern crate serde_json;
 extern crate ureq;
 #[macro_use]
 extern crate log;
-
+extern crate chain;
 extern crate miner;
 extern crate primitives;
 extern crate rpc;
+extern crate serialization as ser;
 
-use std::io::prelude::*;
-use std::time::Duration;
-
+use chain::{Block, BlockHeader, IndexedBlock};
 use clap::Clap;
 use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
 use jsonrpc_core::types::response::{Output, Response, Success};
+use primitives::hash::H256 as GlobalH256;
+use std::io::prelude::*;
+use std::time::Duration;
 
 use miner::BlockTemplate as minerBlockTemplate;
 use primitives::compact::Compact;
 use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
+use ser::{deserialize, serialize};
 
 #[derive(Debug, PartialEq, Clone)]
 enum Error {
@@ -144,7 +147,30 @@ fn mine(opts: MineOpts) {
 
                         log::info!("found solution: {:?}", solution.iterations);
 
-                        // TOOD: submit
+                        // construct block
+                        let blk = Block {
+                            block_header: BlockHeader {
+                                version: template.version,
+                                previous_header_hash: template.previous_header_hash,
+                                time: template.time,
+                                bits: template.bits,
+                                pubkey: pubkey.clone(),
+                                iterations: solution.iterations,
+                                randomness: solution.randomness,
+                            },
+                            proof: solution.proof,
+                        };
+                        // serialise block
+                        let ser_block = serialize(&blk);
+                        // TODO submit serialised block
+                        let resp = ureq::post(url)
+                            .set("X-My-Header", "Secret")
+                            .send_json(ureq::json!({
+                            "jsonrpc": "2.0",
+                            "method": "getblocktemplate",
+                            "params": [{}],
+                            "id": format!("\"{}\"", req_id)
+                            }));
                     }
                 }
 
@@ -174,9 +200,11 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("receive template: {:?}", template);
 
+    // TODO
+    let previous_header_global_hash: GlobalH256 = GlobalH256::from(template.previousblockhash);
     Ok(minerBlockTemplate {
         version: template.version,
-        previous_header_hash: template.previousblockhash.reversed().into(), // TODO:
+        previous_header_hash: previous_header_global_hash, // TODO:
         time: template.curtime,
         height: template.height,
         bits: Compact::from(template.bits),
