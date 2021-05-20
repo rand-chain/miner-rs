@@ -21,14 +21,13 @@ use clap::Clap;
 use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
 use jsonrpc_core::types::response::{Output, Response, Success};
-use primitives::hash::H256 as GlobalH256;
-use std::io::prelude::*;
-use std::time::Duration;
-
 use miner::BlockTemplate as minerBlockTemplate;
 use primitives::compact::Compact;
+use primitives::hash::H256 as GlobalH256;
 use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
 use ser::{deserialize, serialize};
+use std::io::prelude::*;
+use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Error {
@@ -135,18 +134,18 @@ fn mine(opts: MineOpts) {
                     Err(_) =>  continue,
 
                     Ok(template) => {
-                        if template.height == last_height {
-                            continue;
-                        };
-
+                        // refresh request ID and last height
                         req_id += 1;
                         last_height = template.height;
-                        let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
+                        // let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
+                        //     Some(sol) => sol,
+                        //     None => continue,
+                        // };
+                        let solution = match miner::find_solution_dry(&template, &pubkey) {
                             Some(sol) => sol,
                             None => continue,
                         };
-
-                        log::info!("found solution: {:?}", solution.iterations);
+                        log::info!("find solution: {:?}", solution.randomness);
 
                         // construct block
                         let blk = Block {
@@ -162,19 +161,19 @@ fn mine(opts: MineOpts) {
                             proof: solution.proof,
                         };
                         // serialise block
-                        let ser_block = serialize(&blk).to_owned();
+                        let ser_block = serialize(&blk);
                         // construct request with serialised block
-                        let resp = ureq::post(&opts.endpoint)
+                        // make request and receive response
+                        let req = ureq::post(&opts.endpoint)
                             .set("X-My-Header", "Secret")
                             .send_json(ureq::json!({
-                            "jsonrpc": "2.0",
-                            "method": "submitblock",
-                            "params": [&ser_block[..]],
-                            "id": format!("\"{}\"", req_id)
+                                "jsonrpc": "2.0",
+                                "method": "submitblock",
+                                "params": [{"data": &ser_block[..]}],
+                                "id": format!("\"{}\"", req_id)
                             }));
-                        // make request and receive response
-                        let ser_resp = resp.into_string().unwrap();
-                        log::debug!("received: {:?}", ser_resp);
+                        let resp = req.unwrap(); // TODO error handling
+                        log::debug!("received response of submitblock: {:?}", &resp);
                     }
                 }
 
@@ -184,31 +183,31 @@ fn mine(opts: MineOpts) {
 }
 
 fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
-    let resp = ureq::post(url)
+    let req = ureq::post(url)
         .set("X-My-Header", "Secret")
         .send_json(ureq::json!({
-        "jsonrpc": "2.0",
-        "method": "getblocktemplate",
-        "params": [{}],
-        "id": format!("\"{}\"", req_id)
-         }));
-    let ser_resp = resp.into_string().unwrap();
-    log::debug!("received: {:?}", ser_resp);
-
-    let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
-        Err(_) => return Err(Error::SerError),
-        success_resp => success_resp.unwrap(),
-    };
+           "jsonrpc": "2.0",
+           "method": "getblocktemplate",
+           "params": [{}],
+           "id": format!("\"{}\"", req_id)
+        }));
+    let resp = req.unwrap(); // TODO error handling
+    log::debug!("receive response of getblocktemplate: {:?}", resp);
+    let success_resp = resp.into_json::<Success>().unwrap();
 
     let template =
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
-    log::info!("receive template: {:?}", template);
+    log::info!(
+        "receive template with previous block hash {:?} and height {} from {:?}",
+        template.previousblockhash,
+        template.height,
+        url
+    );
 
-    // TODO RH
     let previous_header_global_hash: GlobalH256 = template.previousblockhash.into();
     Ok(minerBlockTemplate {
         version: template.version,
-        previous_header_hash: previous_header_global_hash, // TODO:
+        previous_header_hash: previous_header_global_hash,
         time: template.curtime,
         height: template.height,
         bits: Compact::from(template.bits),
