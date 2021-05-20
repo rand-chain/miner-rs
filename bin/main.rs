@@ -12,6 +12,7 @@ extern crate log;
 extern crate chain;
 extern crate miner;
 extern crate primitives;
+#[macro_use]
 extern crate rpc;
 extern crate serialization as ser;
 
@@ -161,16 +162,19 @@ fn mine(opts: MineOpts) {
                             proof: solution.proof,
                         };
                         // serialise block
-                        let ser_block = serialize(&blk);
-                        // TODO submit serialised block
-                        let resp = ureq::post(url)
+                        let ser_block = serialize(&blk).to_owned();
+                        // construct request with serialised block
+                        let resp = ureq::post(&opts.endpoint)
                             .set("X-My-Header", "Secret")
                             .send_json(ureq::json!({
                             "jsonrpc": "2.0",
-                            "method": "getblocktemplate",
-                            "params": [{}],
+                            "method": "submitblock",
+                            "params": [&ser_block[..]],
                             "id": format!("\"{}\"", req_id)
                             }));
+                        // make request and receive response
+                        let ser_resp = resp.into_string().unwrap();
+                        log::debug!("received: {:?}", ser_resp);
                     }
                 }
 
@@ -189,7 +193,7 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
         "id": format!("\"{}\"", req_id)
          }));
     let ser_resp = resp.into_string().unwrap();
-    log::debug!("recieved: {:?}", ser_resp);
+    log::debug!("received: {:?}", ser_resp);
 
     let success_resp = match serde_json::from_str::<Success>(&ser_resp) {
         Err(_) => return Err(Error::SerError),
@@ -200,8 +204,8 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
     log::info!("receive template: {:?}", template);
 
-    // TODO
-    let previous_header_global_hash: GlobalH256 = GlobalH256::from(template.previousblockhash);
+    // TODO RH
+    let previous_header_global_hash: GlobalH256 = template.previousblockhash.into();
     Ok(minerBlockTemplate {
         version: template.version,
         previous_header_hash: previous_header_global_hash, // TODO:
