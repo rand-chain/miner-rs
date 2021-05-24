@@ -121,7 +121,7 @@ fn mine(opts: MineOpts) {
     let pubkey = load_pk(&opts.pubkey);
     let tick = chan::tick(Duration::from_secs(1));
     let mut req_id = 1u64;
-    let mut last_height = 1u32;
+    let mut last_height = 0u32;
 
     loop {
         chan_select! {
@@ -136,7 +136,20 @@ fn mine(opts: MineOpts) {
                     Ok(template) => {
                         // refresh request ID and last height
                         req_id += 1;
+
+                        // if the template does not change, skip
+                        if last_height == template.height {
+                            continue
+                        }
                         last_height = template.height;
+
+                        log::info!(
+                            "receive new template with previous block hash {:?} and height {} from {:?}",
+                            template.previous_header_hash,
+                            template.height,
+                            opts.endpoint
+                        );
+
                         // let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
                         //     Some(sol) => sol,
                         //     None => continue,
@@ -162,21 +175,22 @@ fn mine(opts: MineOpts) {
                         };
                         // serialise block
                         let ser_block = serialize(&blk);
-                        // construct request with serialised block
                         // make request and receive response
                         let req = ureq::post(&opts.endpoint)
                             .set("X-My-Header", "Secret")
                             .send_json(ureq::json!({
                                 "jsonrpc": "2.0",
                                 "method": "submitblock",
-                                "params": [{"data": &ser_block[..]}],
+                                // "params": [{"data": &ser_block[..]}],
+                                "params": [{"data": "fuckyou"}],
                                 "id": format!("\"{}\"", req_id)
                             }));
-                        let resp = req.unwrap(); // TODO error handling
-                        log::debug!("received response of submitblock: {:?}", &resp);
+                        match req {
+                            Ok(resp) => log::info!("received response of submitblock: {:?}", resp),
+                            Err(err) => log::error!("when submitblock: {:?}", err),
+                        }
                     }
                 }
-
             },
         }
     }
@@ -197,12 +211,6 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
 
     let template =
         serde_json::from_str::<rpcBlockTemplate>(&success_resp.result.to_string()).unwrap();
-    log::info!(
-        "receive template with previous block hash {:?} and height {} from {:?}",
-        template.previousblockhash,
-        template.height,
-        url
-    );
 
     let previous_header_global_hash: GlobalH256 = template.previousblockhash.into();
     Ok(minerBlockTemplate {
