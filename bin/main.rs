@@ -181,13 +181,13 @@ fn mine(opts: MineOpts) {
                             .send_json(ureq::json!({
                                 "jsonrpc": "2.0",
                                 "method": "submitblock",
-                                // "params": [{"data": &ser_block[..]}],
-                                "params": [{"data": "fuckyou"}],
+                                "params": [{"data": &ser_block[..]}],
+                                // "params": [{"data": "fuckyou"}],
                                 "id": format!("\"{}\"", req_id)
                             }));
                         match req {
                             Ok(resp) => log::info!("received response of submitblock: {:?}", resp),
-                            Err(err) => log::error!("when submitblock: {:?}", err),
+                            Err(err) => log::info!("error upon submitblock: {:?}", err),
                         }
                     }
                 }
