@@ -174,19 +174,18 @@ fn mine(opts: MineOpts) {
                             proof: solution.proof,
                         };
                         // serialise block
-                        let ser_block = serialize(&blk);
+                        let ser_block: String = serialize(&blk).to_hex();
                         // make request and receive response
                         let req = ureq::post(&opts.endpoint)
                             .set("X-My-Header", "Secret")
                             .send_json(ureq::json!({
                                 "jsonrpc": "2.0",
                                 "method": "submitblock",
-                                "params": [{"data": &ser_block[..]}],
-                                // "params": [{"data": "fuckyou"}],
+                                "params": [{"data": &ser_block}],
                                 "id": format!("\"{}\"", req_id)
                             }));
                         match req {
-                            Ok(resp) => log::info!("received response of submitblock: {:?}", resp),
+                            Ok(resp) => log::info!("received response of submitblock: {:?}", resp.into_string()),
                             Err(err) => log::info!("error upon submitblock: {:?}", err),
                         }
                     }
