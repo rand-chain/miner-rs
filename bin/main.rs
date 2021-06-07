@@ -22,12 +22,13 @@ use ecvrf::VrfPk;
 use hex::{FromHex, ToHex};
 use jsonrpc_core::types::response::{Output, Response, Success};
 use miner::BlockTemplate as minerBlockTemplate;
-use miner::Solution;
+use miner::{init, prove, solve};
 use primitives::compact::Compact;
 use primitives::hash::H256 as GlobalH256;
 use rpc::v1::types::BlockTemplate as rpcBlockTemplate;
 use ser::{deserialize, serialize};
 use std::io::prelude::*;
+use std::thread;
 use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -62,7 +63,7 @@ struct KeyGenOpts {
 }
 
 /// A subcommand for mining
-#[derive(Clap)]
+#[derive(Clap, Clone)]
 struct MineOpts {
     /// Output public key file
     #[clap(short = "u", long = "pub", default_value = "pub.key")]
@@ -73,7 +74,7 @@ struct MineOpts {
 }
 
 fn main() {
-    ::std::env::set_var("RUST_LOG", "info");
+    ::std::env::set_var("RUST_LOG", "trace");
     env_logger::init();
 
     let opts: Opts = Opts::parse();
@@ -146,78 +147,168 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
 
 fn mine(opts: MineOpts) {
     let pubkey = load_pk(&opts.pubkey);
-    let tick = chan::tick(Duration::from_secs(1));
     let mut req_id = 1u64;
-    let mut last_height = 0u32;
 
-    loop {
-        chan_select! {
-            default => {},
+    let mut tpl: minerBlockTemplate = match try_req(&opts.endpoint, req_id) {
+        Err(err) => {
+            error!("error upon getblocktemplate: {:?}", err);
+            return;
+        }
+        Ok(template) => template,
+    };
 
-            tick.recv() => {
-                log::info!("req_id: {}", req_id);
-
-                match try_req(&opts.endpoint, req_id) {
-                    Err(_) =>  continue,
-
-                    Ok(template) => {
-                        // refresh request ID and last height
-                        req_id += 1;
-
-                        // if the template does not change, skip
-                        if last_height == template.height {
-                            continue
-                        }
-                        last_height = template.height;
-
-                        log::info!(
-                            "receive new template with previous block hash {:?} and height {} from {:?}",
-                            template.previous_header_hash,
-                            template.height,
-                            opts.endpoint
-                        );
-
-                        let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(60)) {
-                            Some(sol) => sol,
-                            None => continue,
-                        };
-                        // let solution = match miner::find_solution_dry(&template, &pubkey) {
-                        //     Some(sol) => sol,
-                        //     None => continue,
-                        // };
-                        log::info!("find solution: {:?}", solution.element);
-
-                        // construct block
-                        let blk = Block {
-                            block_header: BlockHeader {
-                                version: template.version,
-                                previous_header_hash: template.previous_header_hash,
-                                time: template.time,
-                                bits: template.bits,
-                                pubkey: pubkey.clone(),
-                                iterations: solution.iterations as u32,
-                                randomness: solution.element,
-                            },
-                            proof: solution.proof,
-                        };
-                        // serialise block
-                        let ser_block: String = serialize(&blk).to_hex();
-                        // make request and receive response
-                        let req = ureq::post(&opts.endpoint)
-                            .set("X-My-Header", "Secret")
-                            .send_json(ureq::json!({
-                                "jsonrpc": "2.0",
-                                "method": "submitblock",
-                                "params": [{"data": &ser_block}],
-                                "id": format!("\"{}\"", req_id)
-                            }));
-                        match req {
-                            Ok(resp) => log::info!("received response of submitblock: {:?}", resp.into_string()),
-                            Err(err) => log::info!("error upon submitblock: {:?}", err),
-                        }
-                    }
+    // update block template thread
+    let endpoint = opts.endpoint.clone();
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+        match try_req(&endpoint, req_id) {
+            Err(err) => {
+                error!("error upon getblocktemplate: {:?}", err);
+            }
+            Ok(template) => {
+                req_id += 1;
+                if tpl.previous_header_hash != template.previous_header_hash {
+                    info!(
+                        "receive new template with previous block hash {:?} and height {} from {:?}",
+                        template.previous_header_hash,
+                        template.height,
+                        endpoint.clone(),
+                    );
+                    tpl = template;
                 }
-            },
+            }
+        };
+    });
+
+    // mine thread
+    let mut sol = init(&tpl, &pubkey);
+    let mut previous_header_hash = tpl.previous_header_hash;
+    loop {
+        // when tpl is new,
+        // re-init solution and update header hash
+        if previous_header_hash != tpl.previous_header_hash {
+            sol = init(&tpl, &pubkey);
+            previous_header_hash = tpl.previous_header_hash;
+        }
+
+        // increment by SeqPoW:Solve()
+        let (new_solution, valid) = solve(&tpl, &pubkey, &sol);
+
+        // if valid,
+        // 1. generate proof
+        // 2. construct block
+        // 3. send block to node
+        if valid {
+            sol = prove(&tpl, &pubkey, &new_solution);
+            info!("find solution: {:?}", sol.element);
+            // construct block
+            let blk = Block {
+                block_header: BlockHeader {
+                    version: tpl.version,
+                    previous_header_hash: tpl.previous_header_hash,
+                    time: tpl.time,
+                    bits: tpl.bits,
+                    pubkey: pubkey.clone(),
+                    iterations: sol.iterations as u32,
+                    randomness: sol.element.clone(),
+                },
+                proof: sol.proof.clone(),
+            };
+            // serialise block
+            let ser_block: String = serialize(&blk).to_hex();
+            // make request and receive response
+            let req = ureq::post(&opts.endpoint)
+                .set("X-My-Header", "Secret")
+                .send_json(ureq::json!({
+                    "jsonrpc": "2.0",
+                    "method": "submitblock",
+                    "params": [{"data": &ser_block}],
+                    "id": format!("\"{}\"", req_id)
+                }));
+            match req {
+                Ok(resp) => {
+                    log::info!("received response of submitblock: {:?}", resp.into_string())
+                }
+                Err(err) => log::info!("error upon submitblock: {:?}", err),
+            }
         }
     }
 }
+
+// fn mine(opts: MineOpts) {
+//     let pubkey = load_pk(&opts.pubkey);
+//     let tick = chan::tick(Duration::from_secs(1));
+//     let mut req_id = 1u64;
+//     let mut last_height = 0u32;
+
+//     loop {
+//         chan_select! {
+//             default => {},
+
+//             tick.recv() => {
+//                 log::info!("req_id: {}", req_id);
+
+//                 match try_req(&opts.endpoint, req_id) {
+//                     Err(_) =>  continue,
+
+//                     Ok(template) => {
+//                         // refresh request ID and last height
+//                         req_id += 1;
+
+//                         // if the template does not change, skip
+//                         if last_height == template.height {
+//                             continue
+//                         }
+//                         last_height = template.height;
+
+//                         log::info!(
+//                             "receive new template with previous block hash {:?} and height {} from {:?}",
+//                             template.previous_header_hash,
+//                             template.height,
+//                             opts.endpoint
+//                         );
+
+//                         let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(60)) {
+//                             Some(sol) => sol,
+//                             None => continue,
+//                         };
+//                         // let solution = match miner::find_solution_dry(&template, &pubkey) {
+//                         //     Some(sol) => sol,
+//                         //     None => continue,
+//                         // };
+//                         log::info!("find solution: {:?}", solution.element);
+
+//                         // construct block
+//                         let blk = Block {
+//                             block_header: BlockHeader {
+//                                 version: template.version,
+//                                 previous_header_hash: template.previous_header_hash,
+//                                 time: template.time,
+//                                 bits: template.bits,
+//                                 pubkey: pubkey.clone(),
+//                                 iterations: solution.iterations as u32,
+//                                 randomness: solution.element,
+//                             },
+//                             proof: solution.proof,
+//                         };
+//                         // serialise block
+//                         let ser_block: String = serialize(&blk).to_hex();
+//                         // make request and receive response
+//                         let req = ureq::post(&opts.endpoint)
+//                             .set("X-My-Header", "Secret")
+//                             .send_json(ureq::json!({
+//                                 "jsonrpc": "2.0",
+//                                 "method": "submitblock",
+//                                 "params": [{"data": &ser_block}],
+//                                 "id": format!("\"{}\"", req_id)
+//                             }));
+//                         match req {
+//                             Ok(resp) => log::info!("received response of submitblock: {:?}", resp.into_string()),
+//                             Err(err) => log::info!("error upon submitblock: {:?}", err),
+//                         }
+//                     }
+//                 }
+//             },
+//         }
+//     }
+// }
