@@ -150,14 +150,14 @@ fn mine(opts: MineOpts) {
                             opts.endpoint
                         );
 
-                        // let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(1)) {
-                        //     Some(sol) => sol,
-                        //     None => continue,
-                        // };
-                        let solution = match miner::find_solution_dry(&template, &pubkey) {
+                        let solution = match miner::find_solution(&template, &pubkey, Duration::from_secs(60)) {
                             Some(sol) => sol,
                             None => continue,
                         };
+                        // let solution = match miner::find_solution_dry(&template, &pubkey) {
+                        //     Some(sol) => sol,
+                        //     None => continue,
+                        // };
                         log::info!("find solution: {:?}", solution.randomness);
 
                         // construct block
