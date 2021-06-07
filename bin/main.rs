@@ -74,7 +74,7 @@ struct MineOpts {
 }
 
 fn main() {
-    ::std::env::set_var("RUST_LOG", "trace");
+    ::std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     let opts: Opts = Opts::parse();
