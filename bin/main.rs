@@ -139,7 +139,6 @@ fn try_req(url: &str, req_id: u64) -> Result<minerBlockTemplate, Error> {
     Ok(minerBlockTemplate {
         version: template.version,
         previous_header_hash: previous_header_global_hash,
-        time: template.curtime,
         height: template.height,
         bits: Compact::from(template.bits),
     })
@@ -206,7 +205,6 @@ fn mine(opts: MineOpts) {
                 block_header: BlockHeader {
                     version: tpl.version,
                     previous_header_hash: tpl.previous_header_hash,
-                    time: tpl.time,
                     bits: tpl.bits,
                     pubkey: pubkey.clone(),
                     iterations: sol.iterations as u32,
@@ -283,7 +281,6 @@ fn mine(opts: MineOpts) {
 //                             block_header: BlockHeader {
 //                                 version: template.version,
 //                                 previous_header_hash: template.previous_header_hash,
-//                                 time: template.time,
 //                                 bits: template.bits,
 //                                 pubkey: pubkey.clone(),
 //                                 iterations: solution.iterations as u32,
