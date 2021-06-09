@@ -17,21 +17,21 @@ log = "0.4"
 env_logger = "0.5"
 app_dirs = { git = "https://github.com/paritytech/app-dirs-rs" }
 libc = "0.2"
-chain = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-db = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-logs = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-message = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-miner = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"}
-network = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-p2p = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-primitives = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"}
-rpc = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-serialization = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-serialization_derive = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-storage = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-sync = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-vdf = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
-verification = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "refactor-block-structure"  }
+chain = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+db = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+logs = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+message = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+miner = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"}
+network = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+p2p = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+primitives = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"}
+rpc = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+serialization = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+serialization_derive = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+storage = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+sync = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+vdf = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
+verification = { git = "https://github.com/rand-chain/rust-randchain.git", branch = "dev"  }
 
 [profile.dev]
 debug = true

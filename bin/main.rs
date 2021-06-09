@@ -208,7 +208,7 @@ fn mine(opts: MineOpts) {
                     bits: tpl.bits,
                     pubkey: pubkey.clone(),
                     iterations: sol.iterations as u32,
-                    randomness: sol.element.clone(),
+                    solution: sol.element.clone(),
                 },
                 proof: sol.proof.clone(),
             };
@@ -284,7 +284,7 @@ fn mine(opts: MineOpts) {
 //                                 bits: template.bits,
 //                                 pubkey: pubkey.clone(),
 //                                 iterations: solution.iterations as u32,
-//                                 randomness: solution.element,
+//                                 solution: solution.element,
 //                             },
 //                             proof: solution.proof,
 //                         };
